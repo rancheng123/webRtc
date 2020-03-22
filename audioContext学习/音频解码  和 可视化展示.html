@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style type="text/css">
+        body {
+            background-color: #222222
+        }
+
+
+
+        #wrapper {
+            display: table;
+            width: 100%;
+            height: 100%;
+        }
+
+        #wrapper-inner {
+            display: table-cell;
+            vertical-align: middle;
+            padding-left: 25%;
+            padding-right: 25%;
+        }
+
+        #tip {
+            color: #fff;
+            opacity: 0;
+            transition: opacity 1s;
+            -moz-transition: opacity 1s;
+            -webkit-transition: opacity 1s;
+            -o-transition: opacity 1s;
+        }
+
+        #tip.show {
+            opacity: 1
+        }
+    </style>
+
+</head>
+<body>
+
+
+
+
+<div id="wrapper">
+    <div id="wrapper-inner">
+        <p id="tip">Decoding...</p>
+        <input id="fileChooser" type="file" />
+        <input id="stop" type="button" value="stop" />
+
+        <input id="toggleAnimation" type="button" value="toggleAnimation" />
+        <br>
+        <canvas id="visualizer" width="800" height="400">Your browser does not support Canvas tag.</canvas>
+    </div>
+</div>
+
+</body>
+<script>
+
+    var AudioContext = window.AudioContext || window.webkitAudioContext;
+    var audioContext = new AudioContext();
+
+
+    var canvas = document.getElementById('visualizer');
+    var canvasCtx  = canvas.getContext("2d");
+
+
+
+
+    var fileChooser = document.getElementById('fileChooser');
+    fileChooser.onchange = function() {
+        if (fileChooser.files[0]) {
+
+            var fileReader = new FileReader();
+            fileReader.readAsArrayBuffer(fileChooser.files[0]);
+            fileReader.onload = function(e) {
+
+
+
+
+                //将本地的MP3解码
+                audioContext
+                    .decodeAudioData(e.target.result /*binary*/)
+                    .then((buffer/*这里是 audioBuffer*/)=>{
+
+                        var audioBufferSourceNode = audioContext.createBufferSource();
+                        //设置声音来源
+                        audioBufferSourceNode.buffer = buffer;
+
+                        var analyser = audioContext.createAnalyser();
+                        analyser.fftSize = 256;
+
+
+                        audioBufferSourceNode.connect(analyser);
+                        analyser.connect(audioContext.destination);
+
+                        audioBufferSourceNode.start(0); //部分浏览器是noteOn()函数，用法相同
+
+                        window.audioBufferSourceNode = audioBufferSourceNode;
+                        document.getElementById('stop').onclick = ()=>{
+                            audioBufferSourceNode.stop();
+                        }
+
+                        var type = 'aa';
+                        var stop = null;
+                        document.getElementById('toggleAnimation').onclick = ()=>{
+                            if(stop){
+                                window.cancelAnimationFrame(stop);//可以取消该次动画。
+                            }
+
+
+                            draw()
+
+                            if(type == 'aa'){
+                                type = 'bb'
+
+                            }else{
+                                type = 'aa'
+                            }
+
+                        }
+
+
+
+                        draw()
+                        function draw() {
+
+
+                            if(type == 'aa'){
+                                var dataArray = new Uint8Array(analyser.frequencyBinCount /*bufferLength*/ )
+                            }else{
+                                var dataArray = new Uint8Array(analyser.fftSize);
+                            }
+
+
+
+                            var render = function() {
+                                //更新analyser的数据
+                                if(type == 'aa'){
+                                    analyser.getByteFrequencyData(dataArray);
+                                }else{
+                                    analyser.getByteTimeDomainData(dataArray);
+                                }
+
+
+
+
+                                canvasCtx.strokeStyle = "#00d0ff";
+                                canvasCtx.lineWidth = 2;
+                                canvasCtx.clearRect(0, 0, canvas.width, canvas.height); //清理画布
+
+
+
+                                if(type == 'aa'){
+                                    var step = Math.round(dataArray.length / 60); //采样步长
+                                    for (var i = 0; i < 40; i++) {
+                                        var energy = (dataArray[step * i] / 256.0) * 50;
+                                        for (var j = 0; j < energy; j++) {
+                                            canvasCtx.beginPath();
+                                            canvasCtx.moveTo(20 * i + 2, 200 + 4 * j);
+                                            canvasCtx.lineTo(20 * (i + 1) - 2, 200 + 4 * j);
+                                            canvasCtx.stroke();
+                                            canvasCtx.beginPath();
+                                            canvasCtx.moveTo(20 * i + 2, 200 - 4 * j);
+                                            canvasCtx.lineTo(20 * (i + 1) - 2, 200 - 4 * j);
+                                            canvasCtx.stroke();
+                                        }
+                                        canvasCtx.beginPath();
+                                        canvasCtx.moveTo(20 * i + 2, 200);
+                                        canvasCtx.lineTo(20 * (i + 1) - 2, 200);
+                                        canvasCtx.stroke();
+                                    }
+                                }else{
+                                    canvasCtx.beginPath();
+                                    var sliceWidth = canvas.width * 1.0 / analyser.fftSize;
+                                    var x = 0;
+                                    for(var i = 0; i < analyser.fftSize; i++) {
+                                        var v = dataArray[i] / 128.0;
+                                        var y = v * canvas.height/2;
+                                        if(i === 0) {
+                                            canvasCtx.moveTo(x, y);
+                                        } else {
+                                            canvasCtx.lineTo(x, y);
+                                        }
+                                        x += sliceWidth;
+                                    }
+                                    canvasCtx.lineTo(canvas.width, canvas.height/2);
+                                    canvasCtx.stroke();
+                                }
+
+
+                                stop = window.requestAnimationFrame(render);
+                            }
+                            render();
+                        }
+
+
+                    });
+            }
+
+
+
+        }
+    }
+</script>
+</html>

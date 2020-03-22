@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+
+
+<input type="button" value="投屏" id="screenShare">
+
+<script>
+    document.getElementById('screenShare').onclick = ()=>{
+
+        //这里需要优化，向指定页面发送消息
+
+
+        /*
+
+        徐倩
+        小伊
+        */
+        window.postMessage('getScreenCaptureSourceId')
+    }
+
+    window.addEventListener('message', function (event) {
+
+
+        console.log(event.data.sourceId)
+
+        if(event.data.type == 'responseSourceId'){
+
+
+            /*
+            目标: 自己的程序 连接现有的声网andrio
+
+            */
+            navigator.webkitGetUserMedia({
+                audio: false,
+                video: {
+                    mandatory: {
+                        chromeMediaSource: 'desktop',
+                        chromeMediaSourceId: event.data.sourceId,
+                        minWidth: 1280,
+                        maxWidth: 1920,
+                        minHeight: 720,
+                        maxHeight: 1080
+                    }
+                }
+            }, (stream)=>{
+
+                showStream(stream,'me')
+            }, (e)=>{
+                debugger
+            })
+        }
+    });
+
+
+    //展示视频流
+    function showStream(stream,who){
+        var video = document.createElement('video');
+
+        video.srcObject = stream;
+
+        // 解决报错问题： Uncaught (in promise) DOMException: play() failed because the user didn't interact
+        // 参考  https://blog.csdn.net/yhblog/article/details/83183687
+        video.muted = true;
+
+        if(who && who == 'me'){
+            video.className='video '+ 'me'
+            video.id = '11'
+        }else{
+            video.className='video '+ 'other'
+            video.id = otherUserId
+        }
+
+
+
+        document.body.appendChild(video)
+
+        video.play();
+    }
+
+
+
+
+
+    /*
+    屏幕共享
+        注意点
+            1.移动端并不支持屏幕共享（手机可以接收共享的屏幕内容）
+
+
+        Chrome有屏幕捕捉功能
+            依赖
+                需要安装插件，
+
+                    背景脚本：
+                        运行环境
+                            在插件中运行
+                        作用
+                            可以访问所有Chrome插件的api
+                    内容脚本：
+                        运行环境
+                            在你的网页代码中运行（由插件驱动）
+                        作用
+                             可以与网页通信（通过给窗口发送信息）
+
+
+
+                    内容脚本和背景脚本之间通信方式
+                        chrome.runtime.connect()
+
+
+                var sourceID = chrome.desktopCapture.chooseDesktopMedia()
+
+
+        流程：
+
+
+    */
+
+
+
+
+
+
+
+</script>
+
+</body>
+</html>

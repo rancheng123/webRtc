@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+
+</body>
+<style>
+    .me{
+        border: 2px solid greenyellow;
+    }
+    .other{
+        border: 2px solid blue;
+    }
+
+    .video{
+        width: 200px;
+        height: 200px;
+    }
+
+</style>
+<script>
+
+    /*
+    单个 广播事件 ws peerToPeer
+
+    */
+
+    var userId = parseUrl(location.href).params.userId;
+    var otherUserId = null;
+    var pc;
+
+
+
+    //信令
+    var ws = new WebSocket('wss://' + location.host);
+
+    ws.onopen = (event)=>{
+        //加入会议
+        ws.send(JSON.stringify({
+            userId: userId,
+            'action' : 'join'
+        }));
+
+        meetingStatusReady()
+    }
+    ws.onmessage = function (event) {
+        var data = JSON.parse(event.data);
+
+
+        if(data.action == 'getUsers'){
+
+            //只有自己
+            if(data.data.length == 1){
+
+
+            }
+            // 有多个人
+            else{
+
+                //除了自己，向其他人依次发起视频会议
+                var otherUsers = data.data.filter((ele,i)=>{
+                    return ele != userId
+                })
+
+                launchVideoByQueue(otherUsers)
+
+
+
+            }
+        }
+
+
+        switch ( data.action) {
+            case 'answer' :
+                pc.setRemoteDescription(new RTCSessionDescription(data.answer))
+                break
+            case "candidate":
+                pc.addIceCandidate(new RTCIceCandidate(data.candidate))
+                break
+            case "create":
+
+                otherUserId = data.from
+
+                reactiveSendLocalStream(data.offer,data.from)
+                break
+
+            //由用户关闭
+            case "close":
+                var closedVideo = document.getElementById(data.closedUserId);
+                document.body.removeChild(closedVideo)
+                break
+        }
+    }
+
+
+    var localStream = null;
+    navigator.webkitGetUserMedia({
+        audio: true,
+        video: {
+            mandatory: {},
+            optional: []
+        }
+    }, (stream)=>{
+        localStream = stream;
+
+        meetingStatusReady()
+    }, (e)=>{
+        debugger
+    })
+
+
+
+
+    function meetingStatusReady(){
+        //当本地流准备好  ws可以正常通讯时
+        if(localStream && ws.readyState == 1){
+            showStream(localStream,'me')
+            //加入会议
+            ws.send(JSON.stringify({
+                'action' : 'getUsers'
+            }));
+        }
+
+
+    }
+
+
+
+
+
+    //按循序发起视频会议
+    function launchVideoByQueue(otherUsers){
+
+        otherUserId = otherUsers.pop();
+        if(otherUserId){
+            poactiveSendLocalStream()
+
+
+
+            //此处需要优化
+            setTimeout(()=>{
+                launchVideoByQueue(otherUsers)
+            },1000)
+
+        }
+    }
+
+
+    //被动发送本地流
+    function reactiveSendLocalStream(offer){
+        pc = createPeerConnection();
+        pc.setRemoteDescription(new RTCSessionDescription(offer));
+        pc.addStream(localStream)
+        pc.createAnswer(function (answer) {
+            pc.setLocalDescription(answer);
+            ws.send(JSON.stringify({
+                'from': userId,
+                'to': otherUserId,
+                'action' : 'answer' ,
+                'answer' : answer
+            }));
+            //offerer.setRemoteDescription(answer);
+        }, function() {}, {
+            optional: [],
+            mandatory: {
+                OfferToReceiveAudio: true,
+                OfferToReceiveVideo: true
+            }
+        });
+    }
+
+
+
+
+    function createPeerConnection(){
+        /*
+           webRtc(Web Real-Time Communications)
+               实时通讯
+               作用：建立点对点（Peer-to-Peer）的连接，实现视频流，音频流的传输
+               应用场景：数据分享和电话会议
+
+       */
+
+
+        //Adapter.js 解决webRtc 的兼容性，
+
+        //一个WebRTC连接(本地到远端)
+        var pc = new webkitRTCPeerConnection({
+            iceServers: [{
+                url: 'stun:23.21.150.121'
+            }]
+        });
+
+        pc.onaddstream = function (event) {
+            showStream(event.stream)
+            console.log(8)
+        };
+
+        //当 RTCIceCandidate 被添加到目标 RTCPeerConnection上时将会触发icecandidate 事件
+        pc.onicecandidate = function (event) {
+            if (!event || !event.candidate) return
+            ws.send(JSON.stringify({
+                'action' : 'candidate',
+                'from': userId,
+                'to': otherUserId,
+                'candidate' :event.candidate
+            }));
+        }
+        return pc;
+    }
+
+
+    //主动发送本地流
+    function poactiveSendLocalStream(){
+        pc = createPeerConnection()
+
+        //添加视频流
+        // 如果本地端与远端协调已经发生了，那么需要一个新的媒体流，这样远端才可以使用它。 ??????
+        pc.addStream(localStream)
+        pc.createOffer(function (offer/*寻找远端匹配机器（peer）的请求（带有特定的配置信息）*/) {
+            pc.setLocalDescription(offer)
+
+            ws.send(JSON.stringify({
+                'action' : 'create',
+                'from': userId,
+                'to': otherUserId,
+                'offer':offer
+            }));
+        }, function() {}, {
+            optional: [],
+            mandatory: {
+                OfferToReceiveAudio: false,
+                OfferToReceiveVideo: true
+            }
+        })
+    }
+
+
+
+
+
+
+    //展示视频流
+    function showStream(stream,who){
+        var video = document.createElement('video');
+
+        video.srcObject = stream;
+
+        // 解决报错问题： Uncaught (in promise) DOMException: play() failed because the user didn't interact
+        // 参考  https://blog.csdn.net/yhblog/article/details/83183687
+        video.muted = true;
+
+        if(who && who == 'me'){
+            video.className='video '+ 'me'
+            video.id = userId
+        }else{
+            video.className='video '+ 'other'
+            video.id = otherUserId
+        }
+
+
+
+        document.body.appendChild(video)
+
+        video.play();
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+    function parseUrl(url){
+        var a = document.createElement('a');
+        a.href = url;
+        return {
+            host: a.hostname,
+            query: a.search,
+            params: (function () {
+                var ret = {},
+                    seg = a.search.replace(/^\?/, '').split('&'),
+                    len = seg.length,
+                    i = 0,
+                    s;
+                for (; i < len; i++) {
+                    if (!seg[i]) {
+                        continue;
+                    }
+                    s = seg[i].split('=');
+                    //ret[s[0]] = s[1];
+                    ret[s[0]] = decodeURIComponent(s[1]);
+
+
+                }
+                return ret;
+            })(),
+            hash: a.hash.replace('#', '')
+        };
+    }
+
+
+
+
+
+
+</script>
+</html>

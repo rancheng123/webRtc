@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+
+<video src=""></video>
+</body>
+<script>
+    var video = document.querySelector('video');
+
+
+
+    // Need to be specific for Blink regarding codecs
+    // ./mp4info frag_bunny.mp4 | grep Codec
+
+
+    var mediaSource = new MediaSource;
+    //console.log(mediaSource.readyState); // closed
+    video.src = URL.createObjectURL(mediaSource);
+
+    mediaSource.onsourceopen = function () {
+        //console.log(this.readyState); // open
+        var mediaSource = this;
+        var sourceBuffer = mediaSource.addSourceBuffer('video/mp4; codecs="avc1.42E01E, mp4a.40.2"');
+        fetchAB('./1.mp4', function (buf) {
+
+            debugger
+            sourceBuffer.onupdateend = function (_) {
+                mediaSource.endOfStream();
+                video.play();
+                //console.log(mediaSource.readyState); // ended
+            }
+            sourceBuffer.onabort = ()=>{
+                debugger
+            }
+            sourceBuffer.onupdate  = ()=>{
+                debugger
+            }
+            sourceBuffer.onupdatestart = ()=>{
+                debugger
+            }
+
+
+
+                sourceBuffer.appendBuffer(buf);
+        });
+    }
+
+
+
+    function fetchAB (url, cb) {
+        console.log(url);
+        var xhr = new XMLHttpRequest;
+        xhr.open('get', url);
+        xhr.responseType = 'arraybuffer';
+        xhr.onload = function () {
+            cb(xhr.response);
+        };
+        xhr.send();
+    }
+</script>
+</html>

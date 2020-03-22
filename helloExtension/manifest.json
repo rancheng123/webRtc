@@ -1,0 +1,80 @@
+/*
+  chrome 插件开发
+    作用： 定制化chrome 功能 和体验。
+
+ */
+
+
+{
+
+  // 更高级chrome插件开发知识，详见 https://developer.chrome.com/extensions/devguide
+  //调试chrome 插件，详见 https://developer.chrome.com/tut_debugging
+
+  "name": "Hello Extensions",
+  "description" : "Base Level Extension",
+  "version": "1.0",
+  "manifest_version": 2,
+
+
+
+//  "browser_action": {
+//    "default_popup": "hello.html",
+//    "default_icon": "hello_extensions.png"
+//  },
+
+
+  //用户点击插件图标后的弹出页面
+  "page_action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "48": "images/my.png"
+    }
+  },
+
+
+  //指定选项页面
+  "options_page": "options.html",
+
+  //指定插件图标
+  "icons": {
+    "48": "images/my.png"
+  },
+
+  //指定命令
+  "commands": {
+    //设置快捷键
+    "_execute_browser_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+F",
+        "mac": "MacCtrl+Shift+F"
+      },
+      "description": "Opens hello.html"
+    }
+  },
+
+  //指定背景脚本
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+
+
+  //指定内容脚本
+  "content_scripts": [ {
+    "js": [ "content-script.js" ],
+    "all_frames": true,
+    "run_at": "document_end",
+    //在特定环境下 运行
+    "matches": ["https://192.168.1.7:9001/*"]
+  }],
+
+
+
+  //获取chrome 相关Api 的权限（这样才能使用）,更多Api 详见 https://developer.chrome.com/apps/api_index
+  "permissions": [
+    "storage",
+    "declarativeContent",
+    "activeTab",
+    "desktopCapture"
+  ]
+}

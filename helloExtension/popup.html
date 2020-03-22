@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        button {
+            height: 30px;
+            width: 30px;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+<button id="changeColor"></button>
+
+
+<!-- 相对路径访问文件 -->
+<img src="/images/my.png" alt="">
+
+<!-- 绝对路径访问文件 chrome-extension://<extensionID>/<pathToFile>-->
+<img src="chrome-extension://dpoekjhckmokmiabgpmohmdlnmfodbdi/images/my.png" alt="">
+
+</body>
+<script src="popup.js"></script>
+</html>
