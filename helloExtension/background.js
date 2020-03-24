@@ -49,9 +49,11 @@ chrome.runtime.onConnect.addListener(function (port) {
                 (sourceId)=>{
 
                     if(sourceId) {
+                        //回复消息
                         port.postMessage({
-                            type: 'responseSourceId',
-                            sourceId: sourceId
+                            type: 'response',
+                            msg: msg,
+                            data: sourceId
                         });
                     } else {
                         port.postMessage('PermissionDeniedError');

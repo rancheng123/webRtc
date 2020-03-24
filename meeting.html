@@ -6,6 +6,7 @@
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Document</title>
+    <script src="./utils/index.js"></script>
 </head>
 <body>
 
@@ -23,8 +24,12 @@
         height: 200px;
     }
     .screenShare{
+        width: 100px;
+        height: 100px;
+        float: left;
+    }
+    .screenShare video{
         width: 100%;
-        height: 100%;
     }
 
 </style>
@@ -87,6 +92,10 @@
 
 
 
+
+
+
+
     var userId = parseUrl(location.href).params.userId;
 
     var otherUserId = null;
@@ -125,15 +134,33 @@
 
 
 
+
+
         //信令
         ws = new WebSocket('wss://' + location.host);
 
+
+        ws.wsSend = function(msgObj){
+            if(ws.timer){
+                clearInterval(ws.timer)
+            }
+
+            this.send(JSON.stringify(msgObj));
+
+            //长时间无反应后， 发送检查包
+            ws.timer = setInterval(()=>{
+                this.send(JSON.stringify({
+                    'data': '3'
+                }));
+            },30000)
+        }
+
         ws.onopen = (event)=>{
             //加入会议
-            ws.send(JSON.stringify({
+            ws.wsSend({
                 userId: userId,
                 'action' : 'join'
-            }));
+            });
         }
 
 
@@ -190,9 +217,9 @@
                     // 只有客户（非屏幕）才开启摄像头
                     else{
 
-                        ws.send(JSON.stringify({
+                        ws.wsSend({
                             'action' : 'getConnections'
-                        }));
+                        });
 
 
 
@@ -226,7 +253,15 @@
                         //投屏
                         else{
 
-                            window.postMessage('getScreenCaptureSourceId')
+
+                            winRequest('getScreenCaptureSourceId',(event)=>{
+                                console.log(event.data.data)
+
+                                getStream(event.data.data)
+                            })
+
+
+
 
 
                         }
@@ -250,20 +285,8 @@
 
 
 
-        window.addEventListener('message', function (event) {
-            console.log(event.data.sourceId)
 
 
-            if(event.data.type == 'responseSourceId'){
-
-                getStream(event.data.sourceId)
-
-
-
-
-
-            }
-        });
 
 
     }
@@ -627,12 +650,12 @@
 
         pc.createAnswer(function (answer) {
             pc.setLocalDescription(answer);
-            ws.send(JSON.stringify({
+            ws.wsSend({
                 'from': userId,
                 'to': otherUserId,
                 'action' : 'answer' ,
                 'answer' : answer
-            }));
+            });
             //offerer.setRemoteDescription(answer);
         }, function() {}, {
             optional: [],
@@ -868,11 +891,12 @@
         });
 
         window.pc = pc;
-        debugger
+
 
         pc.onaddstream = function (event) {
 
             window.remoteStream = event.stream;
+            controllStream()
             showStream(remoteStream)
         };
 
@@ -882,7 +906,7 @@
         };
 
         pc.ontrack = function(event) {
-            debugger
+            //debugger
             var audio = document.createElement('audio');
             audio.srcObject = event.streams[0];
             document.body.appendChild(audio)
@@ -893,18 +917,19 @@
         };
 
 
+
         //当申请时
         //当 RTCIceCandidate 被添加到目标 RTCPeerConnection上时将会触发icecandidate 事件
         pc.onicecandidate = function (event) {
             if (!event || !event.candidate) return
 
             //发送申请给远程连接点
-            ws.send(JSON.stringify({
+            ws.wsSend({
                 'action' : 'candidate',
                 'from': userId,
                 'to': otherUserId,
                 'candidate' :event.candidate
-            }));
+            });
         }
 
 
@@ -1023,7 +1048,8 @@
             }
         };
 
-
+        //获取发送过的视频流
+        pc.getSenders()
 
         //身份认证
         pc.peerIdentity
@@ -1072,15 +1098,15 @@
         pc.addStream(localStream)
         pc.createOffer(function (offer/*寻找远端匹配机器（peer）的请求（带有特定的配置信息）*/) {
 
-            debugger
+
             pc.setLocalDescription(offer)
 
-            ws.send(JSON.stringify({
+            ws.wsSend({
                 'action' : 'create',
                 'from': userId,
                 'to': otherUserId,
                 'offer':offer
-            }));
+            });
         }, function() {}, {
             optional: [],
             mandatory: {
@@ -1128,20 +1154,20 @@
 
             if(type == 'meeting'){
                 if(who && who == 'me'){
-                    video.className='video '+ 'me ' + 'meeting'
-                    video.id = userId
+                    wrap.className='video '+ 'me ' + 'meeting'
+                    wrap.id = userId
                 }else{
-                    video.className='video '+ 'other ' + 'meeting'
-                    video.id = otherUserId
+                    wrap.className='video '+ 'other ' + 'meeting'
+                    wrap.id = otherUserId
                 }
             }else{
 
                 if(who && who == 'me'){
-                    video.className='video '+ 'me ' + 'screenShare'
-                    video.id = userId
+                    wrap.className='video '+ 'me ' + 'screenShare'
+                    wrap.id = userId
                 }else{
-                    video.className='video '+ 'other ' + 'screenShare'
-                    video.id = otherUserId
+                    wrap.className='video '+ 'other ' + 'screenShare'
+                    wrap.id = otherUserId
                 }
             }
 
@@ -1172,23 +1198,70 @@
 
 
         var toggleVideo = document.createElement('div');
-        toggleVideo.innerHTML = '关闭视频';
+        toggleVideo.innerHTML = '遮住视频';
         toggleVideo.onclick=()=>{
-            if(toggleVideo.innerHTML == '打开视频'){
+            if(toggleVideo.innerHTML == '显示视频'){
                 stream.getVideoTracks().forEach((videoTrack)=>{
                     videoTrack.enabled = true;
                 })
-                toggleVideo.innerHTML = '关闭视频';
+                toggleVideo.innerHTML = '遮住视频';
             }else{
                 stream.getVideoTracks().forEach((videoTrack)=>{
                     videoTrack.enabled = false;
                 })
-                toggleVideo.innerHTML = '打开视频';
+                toggleVideo.innerHTML = '显示视频';
             }
 
 
         }
         wrap.appendChild(toggleVideo)
+
+
+
+        //删除视频
+        var stopVideo = document.createElement('div');
+        stopVideo.innerHTML = '关闭视频';
+        stopVideo.onclick=()=>{
+
+
+            if(stopVideo.innerHTML == '关闭视频'){
+                if(1){
+                    //第一种方法
+                    stream.getVideoTracks().forEach((videoTrack)=>{
+                        videoTrack.stop()
+                    })
+                }else{
+                    //第二种方法
+                    var sender = pc.getSenders()[0]
+                    pc.removeTrack(sender);
+                }
+                stopVideo.innerHTML = '打开视频';
+            }else{
+
+
+
+                winRequest('getScreenCaptureSourceId',(event)=>{
+                    console.log(event.data.data)
+
+                    getStream(event.data.data)
+                })
+
+
+
+
+
+                //stopVideo.innerHTML = '关闭视频';
+            }
+
+
+
+
+
+
+        }
+        wrap.appendChild(stopVideo)
+
+
 
 
 
