@@ -69,12 +69,7 @@ wsServer.on( 'connection', function ( wsClient ) {
             sendMessageToClients([this.userId],{
                 action: 'getConnectionsSuccess',
                 data: {
-                    screen: arr.filter((userId)=>{
-                        return userId == 'screen'
-                    })[0],
-                    users: arr.filter((userId)=>{
-                        return userId != 'screen'
-                    })
+                    users: arr
                 }
             })
         }
