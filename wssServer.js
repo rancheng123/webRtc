@@ -38,6 +38,8 @@ var server=https.createServer({
     })
 }).listen(9001,getIPAdress (),()=>{
     console.log('listen on ' + 'https://'+ getIPAdress () +':9001')
+    console.log('视频会议访问 ' + 'https://'+ getIPAdress () +':9001/meeting.html?type=meeting&userId=1')
+    console.log('投屏   访问 ' + 'https://'+ getIPAdress () +':9001/meeting.html?type=screenShare&userId=screen')
     console.log('websocket please visit ' + 'wss://'+ getIPAdress () +':9001')
 });
 

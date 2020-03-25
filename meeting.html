@@ -22,13 +22,14 @@
     .meeting{
         width: 200px;
         height: 200px;
+        float: left;
     }
     .screenShare{
         width: 100px;
         height: 100px;
         float: left;
     }
-    .screenShare video{
+    .screenShare video,.meeting video{
         width: 100%;
     }
 
@@ -100,6 +101,7 @@
 
     var otherUserId = null;
     var pc;
+    var pcMaps = {};
     var ws;
     var connections;
 
@@ -204,8 +206,7 @@
                 //由用户关闭
                 case "close" :
                     deleteStream({
-                        userId: data.closedUserId,
-                        initiative: false
+                        userId: data.closedUserId
                     })
 
                     break
@@ -293,6 +294,10 @@
                 pc.removeTrack(sender);
             }
             document.body.removeChild(videoWrap)
+
+            //关闭 点对点链接  节约性能
+            pcMaps[opts.userId].close()
+            delete pcMaps[opts.userId]
         }
 
 
@@ -624,7 +629,7 @@
 
         otherUserId = otherUsers.pop();
         if(otherUserId){
-            poactiveSendLocalStream()
+            initiativeSendLocalStream()
 
 
 
@@ -639,7 +644,13 @@
 
     //被动发送本地流
     function reactiveSendLocalStream(offer){
-        pc = createPeerConnection();
+        if(!pcMaps[otherUserId]){
+            pc = pcMaps[otherUserId] = createPeerConnection();
+        }else{
+            pc = pcMaps[otherUserId]
+        }
+
+
         pc.setRemoteDescription(new RTCSessionDescription(offer));
 
         //用户（非屏幕）返回视频流
@@ -891,6 +902,16 @@
         window.pc = pc;
 
 
+
+
+        /*
+        注意点
+            远端的pc.onaddstream的调用条件
+                1. 本地端添加视频      pc.addStream(localStream)
+                2. 本地端与远端协商
+                     本地  发送offer给    远端
+                     远端  发送answer给   本地
+        */
         pc.onaddstream = function (event) {
 
 
@@ -1043,11 +1064,13 @@
         //信号状态改变时
         pc.onsignalingstatechange = function(event) {
 
-            pc.signalingState
+            console.log(pc.signalingState)
+
             /*
                 have-local-offer
 
-                stable  代表协商完成，其他状态都是协商中
+                stable         代表协商完成，   可以进行下一个协商。
+                        其他状态代表协商中 ，  不可以进行下一个协商。
 
                 closed
             */
@@ -1097,8 +1120,43 @@
 
 
     //主动发送本地流
-    function poactiveSendLocalStream(){
-        pc = createPeerConnection()
+    function initiativeSendLocalStream(){
+
+        if(!pcMaps[otherUserId]){
+            pc = pcMaps[otherUserId] = createPeerConnection()
+        }else{
+            pc = pcMaps[otherUserId]
+        }
+
+
+
+
+
+        if(0){
+            //测试 start
+            otherUserId = 'screen'
+
+            debugger
+            pc.removeStream(localStream)
+            pc.createOffer(function (offer/*寻找远端匹配机器（peer）的请求（带有特定的配置信息）*/) {
+
+
+                pc.setLocalDescription(offer)
+
+                ws.wsSend({
+                    'action' : 'create',
+                    'to': otherUserId,
+                    'offer':offer
+                });
+            }, function() {}, {
+                optional: [],
+                mandatory: {
+                    OfferToReceiveAudio: false,
+                    OfferToReceiveVideo: true
+                }
+            })
+            //测试 end
+        }
 
 
 
@@ -1107,8 +1165,11 @@
 
 
 
-
         pc.addStream(localStream)
+
+
+
+
         pc.createOffer(function (offer/*寻找远端匹配机器（peer）的请求（带有特定的配置信息）*/) {
 
 
