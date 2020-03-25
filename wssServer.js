@@ -54,44 +54,37 @@ wsServer.on( 'connection', function ( wsClient ) {
     wsClient.on( 'message', function ( message ) {
         var message = JSON.parse(message);
 
-
-        if(message.action == 'getConnections'){
-            var arr = [];
-            wsServer.clients.forEach(function each(client) {
-                arr.push(client.userId)
-            });
-
-
-
-
-
-            //过滤对应的客户端
-            sendMessageToClients([this.userId],{
-                action: 'getConnectionsSuccess',
-                data: {
-                    users: arr
-                }
-            })
-        }
-        else if(
-            message.action == 'create' ||
-            message.action == 'answer' ||
-            message.action == 'candidate'
-        ){
-
+        if(message.to){
             //过滤对应的客户端
             sendMessageToClients([message.to],message)
+        }else{
 
+            if(message.action == 'getConnections'){
+                var arr = [];
+                wsServer.clients.forEach(function each(client) {
+                    arr.push(client.userId)
+                });
+                //过滤对应的客户端
+                sendMessageToClients([this.userId],{
+                    action: 'getConnectionsSuccess',
+                    data: {
+                        users: arr
+                    }
+                })
+            }
+
+            else if(message.action == 'join'){
+                this.userId = message.from
+
+                sendMessageToClients([this.userId],{
+                    action: 'joinSuccess',
+                    data: null
+                })
+            }
         }
 
-        else if(message.action == 'join'){
-            this.userId = message.userId
 
-            sendMessageToClients([this.userId],{
-                action: 'joinSuccess',
-                data: null
-            })
-        }
+
 
     });
 

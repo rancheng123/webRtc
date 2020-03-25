@@ -65,7 +65,7 @@
     "all_frames": true,
     "run_at": "document_end",
     //在特定环境下 运行
-    "matches": ["https://192.168.1.2:9001/*"]
+    "matches": ["https://10.28.12.104:9001/*"]
   }],
 
 

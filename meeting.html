@@ -145,7 +145,12 @@
                 clearInterval(ws.timer)
             }
 
-            this.send(JSON.stringify(msgObj));
+
+
+            this.send(JSON.stringify({
+                'from': userId,
+                ...msgObj
+            }));
 
             //长时间无反应后， 发送检查包
             ws.timer = setInterval(()=>{
@@ -158,7 +163,6 @@
         ws.onopen = (event)=>{
             //加入会议
             ws.wsSend({
-                userId: userId,
                 'action' : 'join'
             });
         }
@@ -198,13 +202,14 @@
                     break
 
                 //由用户关闭
-                case "close":
-                    var closedVideo = document.getElementById(data.closedUserId);
-                    if(closedVideo){
-                        document.body.removeChild(closedVideo)
-                    }
+                case "close" :
+                    deleteStream({
+                        userId: data.closedUserId,
+                        initiative: false
+                    })
 
                     break
+
 
                 case "joinSuccess":
 
@@ -232,52 +237,7 @@
                 case "getConnectionsSuccess":
 
                     connections = data.data
-
-
-                    //测试 start
-                    connections.screen = true;
-                    //测试 end
-
-                    if(!connections.screen){
-                        alert('大屏幕（主持人）没有正常启动')
-                    }else{
-
-
-
-
-                        //视频会议
-                        if(type == 'meeting'){
-                            getStream()
-
-                        }
-                        //投屏
-                        else{
-
-
-                            winRequest('getScreenCaptureSourceId',(event)=>{
-                                console.log(event.data.data)
-
-                                getStream(event.data.data)
-                            })
-
-
-
-
-
-                        }
-
-
-
-
-
-
-
-
-
-                    }
-
-
-
+                    openStream()
                     break
             }
         }
@@ -300,6 +260,45 @@
 
 
 
+
+
+    function openStream(){
+        //视频会议
+        if(type == 'meeting'){
+            getStream()
+        }
+        //投屏
+        else{
+            winRequest('getScreenCaptureSourceId',(event)=>{
+                console.log(event.data.data)
+
+                getStream(event.data.data)
+            })
+        }
+    }
+
+    function deleteStream(opts){
+        var videoWrap = document.getElementById(opts.userId);
+        if(videoWrap){
+
+            var stream = videoWrap.querySelector('video').srcObject
+            if(1){
+                //第一种方法
+                stream.getVideoTracks().forEach((videoTrack)=>{
+                    videoTrack.stop()
+                })
+            }else{
+                //第二种方法
+                var sender = pc.getSenders()[0]
+                pc.removeTrack(sender);
+            }
+            document.body.removeChild(videoWrap)
+        }
+
+
+
+
+    }
 
 
 
@@ -352,7 +351,7 @@
 
 
             //除了自己，向其他人和屏幕依次发起视频会议
-            var otherUsers = connections.users.concat(connections.screen).filter((ele,i)=>{
+            var otherUsers = connections.users.filter((ele,i)=>{
                 return ele != userId
             })
 
@@ -557,7 +556,7 @@
 
 
                 //除了自己，向其他人和屏幕依次发起视频会议
-                var otherUsers = connections.users.concat(connections.screen).filter((ele,i)=>{
+                var otherUsers = connections.users.filter((ele,i)=>{
                     return ele != userId
                 })
 
@@ -651,7 +650,6 @@
         pc.createAnswer(function (answer) {
             pc.setLocalDescription(answer);
             ws.wsSend({
-                'from': userId,
                 'to': otherUserId,
                 'action' : 'answer' ,
                 'answer' : answer
@@ -895,6 +893,8 @@
 
         pc.onaddstream = function (event) {
 
+
+
             window.remoteStream = event.stream;
             controllStream()
             showStream(remoteStream)
@@ -926,7 +926,6 @@
             //发送申请给远程连接点
             ws.wsSend({
                 'action' : 'candidate',
-                'from': userId,
                 'to': otherUserId,
                 'candidate' :event.candidate
             });
@@ -1095,6 +1094,10 @@
 
         //添加视频流
         // 如果本地端与远端协调已经发生了，那么需要一个新的媒体流，这样远端才可以使用它。 ??????
+
+
+
+
         pc.addStream(localStream)
         pc.createOffer(function (offer/*寻找远端匹配机器（peer）的请求（带有特定的配置信息）*/) {
 
@@ -1103,7 +1106,6 @@
 
             ws.wsSend({
                 'action' : 'create',
-                'from': userId,
                 'to': otherUserId,
                 'offer':offer
             });
@@ -1123,6 +1125,24 @@
 
     //展示视频流
     function showStream(stream,who){
+
+        if(who && who == 'me'){
+
+            var id = userId
+        }else{
+
+            var id = otherUserId
+        }
+
+
+
+        deleteStream({
+            userId: id
+        })
+
+
+
+
 
         var wrap = document.createElement('div');
 
@@ -1155,21 +1175,22 @@
             if(type == 'meeting'){
                 if(who && who == 'me'){
                     wrap.className='video '+ 'me ' + 'meeting'
-                    wrap.id = userId
+
                 }else{
                     wrap.className='video '+ 'other ' + 'meeting'
-                    wrap.id = otherUserId
+
                 }
             }else{
 
                 if(who && who == 'me'){
                     wrap.className='video '+ 'me ' + 'screenShare'
-                    wrap.id = userId
+
                 }else{
                     wrap.className='video '+ 'other ' + 'screenShare'
-                    wrap.id = otherUserId
+
                 }
             }
+            wrap.id = id
 
             document.body.appendChild(wrap)
             video.play();
@@ -1219,47 +1240,12 @@
 
 
         //删除视频
-        var stopVideo = document.createElement('div');
-        stopVideo.innerHTML = '关闭视频';
-        stopVideo.onclick=()=>{
-
-
-            if(stopVideo.innerHTML == '关闭视频'){
-                if(1){
-                    //第一种方法
-                    stream.getVideoTracks().forEach((videoTrack)=>{
-                        videoTrack.stop()
-                    })
-                }else{
-                    //第二种方法
-                    var sender = pc.getSenders()[0]
-                    pc.removeTrack(sender);
-                }
-                stopVideo.innerHTML = '打开视频';
-            }else{
-
-
-
-                winRequest('getScreenCaptureSourceId',(event)=>{
-                    console.log(event.data.data)
-
-                    getStream(event.data.data)
-                })
-
-
-
-
-
-                //stopVideo.innerHTML = '关闭视频';
-            }
-
-
-
-
-
-
+        var updateVideo = document.createElement('div');
+        updateVideo.innerHTML = '更新视频';
+        updateVideo.onclick=()=>{
+            openStream()
         }
-        wrap.appendChild(stopVideo)
+        wrap.appendChild(updateVideo)
 
 
 

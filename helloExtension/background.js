@@ -27,7 +27,7 @@ chrome.runtime.onInstalled.addListener(function() {
             {
                 conditions: [
                     new chrome.declarativeContent.PageStateMatcher({
-                        pageUrl: {hostEquals: '192.168.1.2:9001'},
+                        pageUrl: {hostEquals: '10.28.12.104:9001'},
                     })
                 ],
                 actions: [new chrome.declarativeContent.ShowPageAction()]
