@@ -10,6 +10,13 @@
 </head>
 <body>
 
+
+
+
+
+
+
+
 </body>
 <style>
     .me{
@@ -176,6 +183,8 @@
 
             switch ( data.action) {
                 case 'answer' :
+
+
                     pc.setRemoteDescription(new RTCSessionDescription(data.answer))
                     break
                 case "candidate":
@@ -351,7 +360,8 @@
         navigator.webkitGetUserMedia(config, (stream)=>{
             localStream = stream;
 
-            showStream(localStream,'me')
+
+            showStream(localStream,userId)
 
 
 
@@ -556,7 +566,7 @@
             }).then(function(stream) {
                 localStream = stream;
 
-                showStream(localStream,'me')
+                showStream(localStream,userId)
 
 
 
@@ -660,6 +670,11 @@
 
         pc.createAnswer(function (answer) {
             pc.setLocalDescription(answer);
+
+
+
+            pc.users.me=userId;
+            pc.users.he=otherUserId;
             ws.wsSend({
                 'to': otherUserId,
                 'action' : 'answer' ,
@@ -788,6 +803,295 @@
                                             多媒体流
                                             编解码方法
 
+                                 组成解释
+
+                                 "
+                                    //sdp版本号，一直为0,rfc4566规定
+                                    v=0
+
+
+                                    o=  -                    (username,没有使用-代替)
+                                        397228656339456119   (sess-id)
+                                        5                    (sess-version, 过程中有改变编码之类的操作，重新生成sdp时,sess-version加1)
+                                        IN                   (nettype)
+                                        IP4                  (addrtype)
+                                        127.0.0.1            (unicast-address)
+
+
+                                    s=-                      (会话名，没有的话使用-代替)
+
+
+                                    t=0 0                    (两个值分别是会话的起始时间和结束时间，这里都是0代表没有限制)
+
+
+                                    a=group:BUNDLE audio video data  (说明音频，视频，数据共用一个传输通道，如果没有这一行，音视频，数据就会分别单独用一个udp端口来发送)
+
+
+                                    (定义Media Stream ID，   WMS是WebRTC Media Stream简称，   一般定义了这个，后面a=ssrc这一行就会有msid,mslabel等属性)
+                                    a=msid-semantic: WMS h1aZ20mbQB0GSsq0YxLfJmiYWE9CBfGch97C
+
+
+
+
+
+                                    //音频部分
+                                        m=
+                                            audio  (说明本会话包含音频)
+                                            60551  (传输音频的端口)
+                                            UDP/TLS/RTP/SAVPF  （来传输音频支持的协议）
+                                            111 103 9 0 8 106 105 13 110 112 113 126 （表示本会话音频支持的编码）
+
+
+                                        c=IN IP4 192.168.1.3  （IP地址，用来接收或发送音频，   webrtc使用ice传输，不使用这个地址）
+
+
+                                        a=rtcp:9 IN IP4 0.0.0.0 （用来传输rtcp地地址和端口，webrtc中不使用）
+
+
+                                        a=candidate:704553097 1 udp 2122260223 192.168.1.3 60551 typ host generation 0 network-id 4 network-cost 10
+                                        a=candidate:559267639 1 udp 2122136831 ::1 36717 typ host generation 0 network-id 2
+                                        a=candidate:1510613869 1 udp 2122063615 127.0.0.1 52474 typ host generation 0 network-id 1
+
+
+                                        a=ice-ufrag:hhy2                    （ice协商过程中的安全验证信息）
+                                        a=ice-pwd:WAFAUxaAjPJeOlYyZ7p9trKf  （ice协商过程中的安全验证信息）
+                                        a=ice-options:renomination
+
+
+                                       （dtls协商过程中需要的认证信息）
+                                        a=fingerprint:sha-256 2F:7C:77:DD:F9:D1:53:BB:0E:66:CD:9C:F4:0E:AD:82:04:0E:00:84:E5:13:6F:8D:AA:79:C8:99:D0:E7:E2:6B
+
+
+                                        a=setup:active  （代表本客户端在dtls协商过程中，可以做客户端也可以做服务端，参考rfc4145 rfc4572）
+
+
+                                        a=mid:audio  （媒体标识）
+
+
+                                        a=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level  （在rtp头部中加入音量信息，参考 rfc6464）
+
+
+                                        a=inactive  （通信方向，
+                                                            recvonly  只接收,
+                                                            sendonly  只发送,
+                                                            sendrecv  接受  也发送,
+                                                            inactive  不接受 不发送
+                                                     ）
+
+
+
+                                        a=rtcp-mux  （指出rtp,rtcp包使用同一个端口来传输）
+
+
+
+                                        a=rtcp-fb:111 transport-cc  （说明opus编码支持使用rtcp来控制拥塞，参考https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions-01）
+
+
+
+                                        a=fmtp:111
+                                            minptime=10; （代表最小打包时长是10ms）
+                                            useinbandfec=1 （代表使用opus编码内置fec特性）
+
+
+                                        （下面几行都是对m=audio这一行的媒体编码补充说明，指出了编码采用的编号，采样率，声道等 ）
+                                        a=rtpmap:111 opus/48000/2
+                                        a=rtpmap:103 ISAC/16000
+                                        a=rtpmap:9 G722/8000
+                                        a=rtpmap:0 PCMU/8000
+                                        a=rtpmap:8 PCMA/8000
+                                        a=rtpmap:106 CN/32000
+                                        a=rtpmap:105 CN/16000
+                                        a=rtpmap:13 CN/8000
+                                        a=rtpmap:110 telephone-event/48000
+                                        a=rtpmap:112 telephone-event/32000
+                                        a=rtpmap:113 telephone-event/16000
+                                        a=rtpmap:126 telephone-event/8000
+
+
+                                        （用于音视频同步）
+                                        a=
+                                            ssrc:18509423                             （发生冲突时   可能会  发生变化）
+                                            cname:sTjtznXLCNH7nbRw  （用来标识一个数据源， 发生冲突时   不     发生变化）
+                                            //个人觉得cname  是 channelName
+
+
+                                        （定义了ssrc和WebRTC中的MediaStream,AudioTrack之间的关系）
+                                        a=
+                                            ssrc:18509423
+                                            msid:
+                                                h1aZ20mbQB0GSsq0YxLfJmiYWE9CBfGch97C  （stream-d）
+                                                15598a91-caf9-4fff-a28f-3082310b2b7a  （track-id）
+
+
+                                        a=
+                                            ssrc:18509423
+                                            mslabel:h1aZ20mbQB0GSsq0YxLfJmiYWE9CBfGch97C  （stream-d）
+
+                                        a=
+                                            ssrc:18509423
+                                            label:15598a91-caf9-4fff-a28f-3082310b2b7a    （track-id）
+
+
+
+
+                                    //视频部分
+                                        m=
+                                            video  (说明本会话包含视频)
+                                            9      (传输视频的端口)
+                                            UDP/TLS/RTP/SAVPF   （来传输视频支持的协议）
+                                            96 98 100 102 127 97 99 101 125   （表示本会话视频支持的编码）
+
+
+                                        c=IN IP4 0.0.0.0  （IP地址，用来接收或发送视频，   webrtc使用ice传输，不使用这个地址）
+
+                                        a=rtcp:9 IN IP4 0.0.0.0 （用来传输rtcp地地址和端口，webrtc中不使用）
+
+
+                                        a=ice-ufrag:hhy2                    （ice协商过程中的安全验证信息）
+                                        a=ice-pwd:WAFAUxaAjPJeOlYyZ7p9trKf  （ice协商过程中的安全验证信息）
+                                        a=ice-options:renomination
+
+
+
+                                        （dtls协商过程中需要的认证信息）
+                                        a=fingerprint:sha-256 2F:7C:77:DD:F9:D1:53:BB:0E:66:CD:9C:F4:0E:AD:82:04:0E:00:84:E5:13:6F:8D:AA:79:C8:99:D0:E7:E2:6B
+
+                                        a=setup:active    （代表本客户端在dtls协商过程中，可以做客户端也可以做服务端，参考rfc4145 rfc4572）
+
+                                        a=mid:video       （媒体标识）
+
+
+
+                                        a=extmap:2 urn:ietf:params:rtp-hdrext:toffset
+                                        a=extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time
+                                        a=extmap:4 urn:3gpp:video-orientation
+                                        a=extmap:5 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01
+                                        a=extmap:6 http://www.webrtc.org/experiments/rtp-hdrext/playout-delay
+
+
+
+
+                                        a=recvonly  （通信类型，
+                                                                recvonly只接收,
+                                                                sendonly只发送,
+                                                                sendrecv接受也发送,
+                                                                inactive 正在激活
+                                                         ）
+
+
+
+                                        a=rtcp-mux  （指出rtp,rtcp包使用同一个端口来传输）
+
+
+                                        a=rtcp-rsize
+
+
+
+
+
+
+                                        a=rtpmap:96 VP8/90000
+                                        (简称，意思是接收方通知发送方发送幅完全帧过来)
+                                        a=rtcp-fb:96
+                                            ccm (ccm是codec control using RTCP feedback message简称，意思是支持使用rtcp反馈机制来实现编码控制)
+                                            fir (fir是Full Intra Request)
+
+                                        a=rtcp-fb:96 nack  (支持丢包重传，参考rfc4585)
+
+                                        a=rtcp-fb:96 nack pli  (支持关键帧丢包重传,参考rfc4585)
+
+                                        a=rtcp-fb:96 goog-remb  (支持使用rtcp包来控制发送方的码流)
+
+                                        a=rtcp-fb:96 transport-cc  （说明opus编码支持使用rtcp来控制拥塞，参考https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions-01）
+
+
+
+
+
+                                        a=rtpmap:98 VP9/90000
+                                        a=rtcp-fb:98 ccm fir
+                                        a=rtcp-fb:98 nack
+                                        a=rtcp-fb:98 nack pli
+                                        a=rtcp-fb:98 goog-remb
+                                        a=rtcp-fb:98 transport-cc
+
+
+                                        a=rtpmap:100 H264/90000
+                                        a=rtcp-fb:100 ccm fir
+                                        a=rtcp-fb:100 nack
+                                        a=rtcp-fb:100 nack pli
+                                        a=rtcp-fb:100 goog-remb
+                                        a=rtcp-fb:100 transport-cc
+                                        a=fmtp:100 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f (h264编码可选的附加说明)
+
+
+
+                                        a=rtpmap:102 red/90000      (fec冗余编码，一般如果sdp中有这一行的话，rtp头部负载类型就是116，否则就是各编码原生负责类型)
+
+                                        a=rtpmap:127 ulpfec/90000   (支持ULP FEC，参考rfc5109)
+
+
+                                        a=rtpmap:97 rtx/90000
+                                        a=fmtp:97 apt=96      (以上两行是VP8编码的重传包rtp类型)
+
+
+
+                                        a=rtpmap:99 rtx/90000
+                                        a=fmtp:99 apt=98
+
+
+                                        a=rtpmap:101 rtx/90000
+                                        a=fmtp:101 apt=100
+
+
+
+                                        a=rtpmap:125 rtx/90000
+                                        a=fmtp:125 apt=102
+
+
+
+
+
+                                        （用于音视频同步）
+                                        a=
+                                            ssrc:18509423                             （发生冲突时   可能会  发生变化）
+                                            cname:sTjtznXLCNH7nbRw  （用来标识一个数据源， 发生冲突时   不     发生变化）
+                                            //个人觉得cname  是 channelName
+
+
+                                        （定义了ssrc和WebRTC中的MediaStream,VideoTrack之间的关系）
+                                        a=
+                                            ssrc:18509423
+                                            msid:
+                                                h1aZ20mbQB0GSsq0YxLfJmiYWE9CBfGch97C  （stream-d）
+                                                15598a91-caf9-4fff-a28f-3082310b2b7a  （track-id）
+
+                                        a=
+                                            ssrc:18509423
+                                            mslabel:h1aZ20mbQB0GSsq0YxLfJmiYWE9CBfGch97C  （stream-d）
+
+                                        a=
+                                            ssrc:18509423
+                                            label:15598a91-caf9-4fff-a28f-3082310b2b7a    （track-id）
+
+
+
+
+
+                                    m=application 9 DTLS/SCTP 5000
+                                    c=IN IP4 0.0.0.0
+                                    b=AS:30
+                                    a=ice-ufrag:hhy2
+                                    a=ice-pwd:WAFAUxaAjPJeOlYyZ7p9trKf
+                                    a=ice-options:renomination
+                                    a=fingerprint:sha-256 2F:7C:77:DD:F9:D1:53:BB:0E:66:CD:9C:F4:0E:AD:82:04:0E:00:84:E5:13:6F:8D:AA:79:C8:99:D0:E7:E2:6B
+                                    a=setup:active
+                                    a=mid:data
+                                    a=sctpmap:5000 webrtc-datachannel 1024
+                                    "
+
+
+
 
 
                         Peer-to-peer Data API
@@ -899,6 +1203,11 @@
             }]
         });
 
+
+
+
+        pc.users ={};
+
         window.pc = pc;
 
 
@@ -914,16 +1223,33 @@
         */
         pc.onaddstream = function (event) {
 
+            debugger
 
 
             window.remoteStream = event.stream;
             controllStream()
-            showStream(remoteStream)
+
+            showStream(remoteStream, event.target.users.he)
         };
 
 
         pc.onremovestream = function(ev) {
             debugger
+
+
+            document.querySelectorAll('video').forEach((ele,i)=>{
+
+                if(ele.parentElement.getAttribute('streamId') == ev.stream.id){
+
+
+                    deleteStream({
+                        userId: ele.parentElement.getAttribute('id')
+                    })
+                }
+            })
+
+
+
         };
 
         pc.ontrack = function(event) {
@@ -955,6 +1281,7 @@
 
 
         pc.onconnectionstatechange = function (event) {
+
 
             switch(pc.connectionState) {
                 case "connected":
@@ -1033,19 +1360,10 @@
 
         // ??????
         pc.onicegatheringstatechange = function() {
-            let label = "Unknown";
 
-            switch(pc.iceGatheringState) {
-                case "new":
-                case "complete":
-                    label = "Idle";
-                    break;
-                case "gathering":
-                    label = "Determining route";
-                    break;
-            }
+            console.log('pc.iceGatheringState:    '+ pc.iceGatheringState)
 
-            document.getElementById("iceStatus").innerHTML = label;
+
         }
 
         //身份认证
@@ -1124,6 +1442,9 @@
 
         if(!pcMaps[otherUserId]){
             pc = pcMaps[otherUserId] = createPeerConnection()
+
+
+
         }else{
             pc = pcMaps[otherUserId]
         }
@@ -1136,11 +1457,13 @@
             //测试 start
             otherUserId = 'screen'
 
-            debugger
+
             pc.removeStream(localStream)
+            pc.addStream(localStream)
             pc.createOffer(function (offer/*寻找远端匹配机器（peer）的请求（带有特定的配置信息）*/) {
 
-
+                console.log('lllllll')
+                console.log(offer.sdp)
                 pc.setLocalDescription(offer)
 
                 ws.wsSend({
@@ -1160,20 +1483,22 @@
 
 
 
-        //添加视频流
-        // 如果本地端与远端协调已经发生了，那么需要一个新的媒体流，这样远端才可以使用它。 ??????
 
-
-
+        //添加视频流, 触发 onnegotiationneeded,  只有协商完成后，远端才能使用 这个流
         pc.addStream(localStream)
 
 
 
 
         pc.createOffer(function (offer/*寻找远端匹配机器（peer）的请求（带有特定的配置信息）*/) {
-
+            console.log('lllllll')
+            console.log(offer.sdp)
 
             pc.setLocalDescription(offer)
+
+
+            pc.users.me=userId;
+            pc.users.he=otherUserId;
 
             ws.wsSend({
                 'action' : 'create',
@@ -1195,21 +1520,12 @@
 
 
     //展示视频流
-    function showStream(stream,who){
-
-        if(who && who == 'me'){
-
-            var id = userId
-        }else{
-
-            var id = otherUserId
-        }
+    function showStream(stream,streamUserId){
 
 
 
-        deleteStream({
-            userId: id
-        })
+
+
 
 
 
@@ -1244,7 +1560,7 @@
             video.muted = true;
 
             if(type == 'meeting'){
-                if(who && who == 'me'){
+                if(streamUserId == userId){
                     wrap.className='video '+ 'me ' + 'meeting'
 
                 }else{
@@ -1253,7 +1569,7 @@
                 }
             }else{
 
-                if(who && who == 'me'){
+                if(streamUserId == userId){
                     wrap.className='video '+ 'me ' + 'screenShare'
 
                 }else{
@@ -1261,7 +1577,11 @@
 
                 }
             }
-            wrap.id = id
+            wrap.id = streamUserId
+
+            wrap.setAttribute('streamId',stream.id)
+
+
 
             document.body.appendChild(wrap)
             video.play();
