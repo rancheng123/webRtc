@@ -60,6 +60,7 @@
                 https://test.webrtc.org/
 
                 chrome://webrtc-internals
+                chrome://flags/
 
                     1.RTCPeerConnection事件  失败将显示红色。
                     2.统计数据列表
@@ -1231,6 +1232,35 @@
         window.pc = pc;
 
 
+
+        //设置编解码能力  需要进一步调用
+        /*
+        const transceiver = pc.getTransceivers().find(t => t.sender && t.sender.track === localStream.getVideoTracks()[0]);
+        transceiver.setCodecPreferences([
+            {
+                "clockRate":90000,
+                "mimeType":"video/H264",
+                "sdpFmtpLine":"level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f"
+            },
+            {
+                "clockRate":90000,
+                "mimeType":"video/VP8"
+            },
+            {
+                "clockRate":90000,
+                "mimeType":"video/rtx"
+            },{"clockRate":90000,"mimeType":"video/VP9","sdpFmtpLine":"profile-id=0"},
+            {"clockRate":90000,"mimeType":"video/VP9","sdpFmtpLine":"profile-id=2"},
+            {"clockRate":90000,"mimeType":"video/H264","sdpFmtpLine":"level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42001f"},
+            {"clockRate":90000,"mimeType":"video/H264","sdpFmtpLine":"level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42001f"},
+            {"clockRate":90000,"mimeType":"video/H264","sdpFmtpLine":"level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f"},
+            {"clockRate":90000,"mimeType":"video/H264","sdpFmtpLine":"level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42e01f"},
+            {"clockRate":90000,"mimeType":"video/H264","sdpFmtpLine":"level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=4d0032"},
+            {"clockRate":90000,"mimeType":"video/H264","sdpFmtpLine":"level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=640032"},
+            {"clockRate":90000,"mimeType":"video/red"},
+            {"clockRate":90000,"mimeType":"video/ulpfec"}
+        ]);
+        */
 
 
         /*

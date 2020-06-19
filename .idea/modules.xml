@@ -3,7 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/webRtc.iml" filepath="$PROJECT_DIR$/.idea/webRtc.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/webRtc.iml" filepath="$PROJECT_DIR$/.idea/webRtc.iml" />
     </modules>
   </component>
 </project>
