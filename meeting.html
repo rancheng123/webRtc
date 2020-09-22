@@ -759,22 +759,34 @@
 
 
                             ICE (Interactive Connectivity Establishment,交互式连接建立)
-                                本质
+                                本质（网络地址转换协议）
                                     是一种NAT传输协议（建立在STUN协议和TURN协议之上）
 
                                     NAT（Network Address Translation，网络地址转换）
                                 作用
-                                    用于建立多媒体会话
+                                    为打通不同局域网的链接， （数据包报头中的ip地址转换） 将本地IP地址  转成  公共IP地址
+                                    客户端侧无需关心所处网络的位置以及NAT类型，并且能够动态的发现最优的传输路径。
+
+
+                                        3中情况
+                                            1.同一局域网内，两台机器本地IP地址之间    可连接
+
+                                            2.不同局域网内，两台机器本地IP地址之间  不可连接
+                                            3.不同局域网内，两台机器公共IP地址之间    可连接
+
+
 
                                 工作流程
-                                    1.每个端 有多个传输地址候选（CANDIDATE）
+                                    1.每个端 有多个传输地址候选（CANDIDATE）, 可以设置Candidate的优先级
 
                                         HOST             CANDIDATE
                                         SERVER REFLEXIVE CANDIDATES
                                         RELAYED          CANDIDATES
 
 
-                                    2.找出可以用的 一对候选地址（候选地址有多个，但并不是都能用）
+                                    2.组成多个候选对，并且找出可以用的 一对候选地址（候选地址有多个，但并不是都能用）
+
+                                        ICE选择高优先级的可以联通的candidate pair。
 
 
 
@@ -803,12 +815,18 @@
                                             多媒体流
                                             编解码方法
 
+                                        角色
+                                            controlling角色 （控制方）
                                     answer
                                         本质
                                             SDP报文
                                         包含
                                             多媒体流
                                             编解码方法
+
+                                        角色
+                                            controlled角色 （被控制方）
+
 
                                  组成解释
 
@@ -1208,21 +1226,41 @@
 
         var pc = new webkitRTCPeerConnection({
             iceServers: [{
-                //作用： 为打通不同局域网的链接， （数据包报头中的ip地址转换） 将本地IP地址  转成  公共IP地址
-                //，
-
-                /*
-                    同一局域网内，两台机器本地IP地址之间    可连接
-
-                    不同局域网内，两台机器本地IP地址之间  不可连接
-                    不同局域网内，两台机器公共IP地址之间    可连接
-
-
-                */
-
                 url: 'stun:23.21.150.121'
             }]
         });
+
+        //当申请时
+        //当 RTCIceCandidate 被添加到目标 RTCPeerConnection上时将会触发icecandidate 事件
+        pc.onicecandidate = function (event) {
+            if (!event || !event.candidate) return
+
+            //发送申请给远程连接点
+            ws.wsSend({
+                'action' : 'candidate',
+                'to': otherUserId,
+                'candidate' :event.candidate
+            });
+        }
+
+        //信号状态改变时
+        pc.onsignalingstatechange = function(event) {
+
+            console.log(pc.signalingState)
+
+            /*
+                have-local-offer
+
+                stable         代表协商完成，   可以进行下一个协商。
+                        其他状态代表协商中 ，  不可以进行下一个协商。
+
+                closed
+            */
+
+            if (pc.signalingState === "have-local-pranswer") {
+                // setLocalDescription() has been called with an answer
+            }
+        };
 
 
 
@@ -1315,18 +1353,7 @@
 
 
 
-        //当申请时
-        //当 RTCIceCandidate 被添加到目标 RTCPeerConnection上时将会触发icecandidate 事件
-        pc.onicecandidate = function (event) {
-            if (!event || !event.candidate) return
 
-            //发送申请给远程连接点
-            ws.wsSend({
-                'action' : 'candidate',
-                'to': otherUserId,
-                'candidate' :event.candidate
-            });
-        }
 
 
 
@@ -1429,24 +1456,7 @@
         }
 
 
-        //信号状态改变时
-        pc.onsignalingstatechange = function(event) {
 
-            console.log(pc.signalingState)
-
-            /*
-                have-local-offer
-
-                stable         代表协商完成，   可以进行下一个协商。
-                        其他状态代表协商中 ，  不可以进行下一个协商。
-
-                closed
-            */
-
-            if (pc.signalingState === "have-local-pranswer") {
-                // setLocalDescription() has been called with an answer
-            }
-        };
 
         //获取发送过的视频流
         pc.getSenders()
