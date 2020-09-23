@@ -45,6 +45,13 @@
 
 
     /*
+        参考文档
+        https://www.html5rocks.com/en/tutorials/webrtc/basics/#toc-sans
+
+    */
+
+
+    /*
         常见问题：
             投屏卡顿：  内存泄漏，Cpu 飙升
 
@@ -777,16 +784,26 @@
 
 
                                 工作流程
-                                    1.每个端 有多个传输地址候选（CANDIDATE）, 可以设置Candidate的优先级
-
-                                        HOST             CANDIDATE
-                                        SERVER REFLEXIVE CANDIDATES
-                                        RELAYED          CANDIDATES
+                                    1.收集本机的 candidates
 
 
-                                    2.组成多个候选对，并且找出可以用的 一对候选地址（候选地址有多个，但并不是都能用）
+                                        每个端 有多个传输地址候选（CANDIDATE）, 可以设置Candidate的优先级
+
+                                            HOST             CANDIDATE
+                                            SERVER REFLEXIVE CANDIDATES
+                                            RELAYED          CANDIDATES
+
+                                    2.交换candidates
+                                        ICE 使用offer/answer方式，双方通过SDP协商交换candidate信息.
+
+                                    3.生成多个候选对     （checklist  等待连通性检查验证的候选对） （候选地址有多个，但并不是都能用）
+
+                                    4.生成多个可用的候选对（validlist  通过连通性检查验证的候选对）
+
+                                    5.选择最终传输地址
 
                                         ICE选择高优先级的可以联通的candidate pair。
+
 
 
 
@@ -817,6 +834,11 @@
 
                                         角色
                                             controlling角色 （控制方）
+
+                                                ICE角色冲突解决
+                                                    当两端角色都为controlling或者controlled角色冲突时，在连通性检查阶段，要求发送binding request消息里必须要带上tie-breaker属性。
+                                                    当出现冲突时，比较tie-breaker大小，值比较大的则被认为是controlling，同时回应487错误给对端，对端收到487错误后切换角色。
+
                                     answer
                                         本质
                                             SDP报文
