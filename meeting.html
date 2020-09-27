@@ -44,9 +44,16 @@
 <script>
 
 
+
+
+
+
     /*
         参考文档
         https://www.html5rocks.com/en/tutorials/webrtc/basics/#toc-sans
+
+        //domes
+        https://webrtc.github.io/samples/
 
     */
 
@@ -337,10 +344,27 @@
         if(type == 'meeting'){
             var config = {
                 audio: true,
+                /*
+                audio: {
+                    // 音频的采样率
+                    sampleRate: '',
+                    //  音频的采样大小
+                    sampleSize: '',
+                    // 音量
+                    volume: '',
+                    // 噪声抑制
+                    noiseSuppression: true,
+                    // 回声消除(不兼容，有点浏览器不支持)
+                    echoCancellation: false
+                },
+                */
                 video: {
                     mandatory: {},
                     optional: [],
 
+                    width: {
+                        exact: 1280
+                    }
                     //获取一个最接近 1280x720 的相机分辨率
                     // width: 1280, height: 720,
                     //
@@ -1636,6 +1660,17 @@
 
         }
 
+        video.onresize = () => {
+
+             /*
+
+
+
+
+             */
+
+        };
+
         video.onloadedmetadata = function(e) {
             // 解决报错问题： Uncaught (in promise) DOMException: play() failed because the user didn't interact
             // 参考  https://blog.csdn.net/yhblog/article/details/83183687
@@ -1697,6 +1732,16 @@
             if(toggleVideo.innerHTML == '显示视频'){
                 stream.getVideoTracks().forEach((videoTrack)=>{
                     videoTrack.enabled = true;
+
+
+                    /*
+                        const track = mediaStream.getVideoTracks()[0]
+
+                        //获取约束
+                        track.getConstraints()
+                     */
+
+
                 })
                 toggleVideo.innerHTML = '遮住视频';
             }else{
