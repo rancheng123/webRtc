@@ -5,6 +5,7 @@
   "description": "html页面发送ajax请求的服务器",
   "devDependencies": {
     "express": "^4.17.1",
+    "ffmpeg": "^0.0.4",
     "koa": "^2.8.2",
     "koa-router": "^7.4.0",
     "nodejs-websocket": "^1.7.0",
