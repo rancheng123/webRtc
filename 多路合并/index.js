@@ -1,3 +1,6 @@
+//ffmpeg 官网
+//http://ffmpeg.org/documentation.html
+
 var ffmpeg = require('ffmpeg');
 
 try {
@@ -21,3 +24,11 @@ try {
     console.log(e.code);
     console.log(e.msg);
 }
+
+
+//docker run jrottenberg/ffmpeg             -i https://vd2.bdstatic.com/mda-ki322h6z37cct922/sc/cae_h264_clips/mda-ki322h6z37cct922.mp4?auth_key=1602561944-0-0-18dff5a4dc8f5eff119581c701e91a58&bcevod_channel=searchbox_feed&pd=1&pt=3             -stats             $ffmpeg_options  - > /Users/rancheng/Downloads/out.mp4
+
+
+
+
+

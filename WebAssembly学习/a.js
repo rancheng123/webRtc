@@ -1,3 +1,23 @@
+// 参考地址
+//  https://www.chenng.cn/post/WebAssembly-ffmpeg.html
+
+// ffmpeg.js
+//https://www.worldlink.com.cn/osdir/ffmpegjs.html
+//
+
+// demo
+//https://github.com/ffmpegwasm/react-app
+
+//聊聊前端webrtc的hevc解码那些事儿
+//https://zhuanlan.zhihu.com/p/237759555
+
+//各种尝试
+//https://www.jianshu.com/u/9daf5a1fd425
+
+//花椒直播的实例
+//https://zhuanlan.zhihu.com/p/73772711?utm_source=com.tencent.qqlite
+
+
 /*
 
 

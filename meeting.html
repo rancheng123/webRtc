@@ -122,6 +122,25 @@
 
 
 
+    /*
+    webRTC 的整个流程
+
+        发送端
+            1.数据采集
+            2.数据处理
+                打上公司水印，logo
+            2.编码
+            3.封装（形成RTP数据包）
+
+
+            4.网络传输
+        接收端
+
+            5.接收字节流，并转化为RTP数据包
+            7.解码
+            8.渲染
+
+    */
 
 
 
@@ -305,6 +324,22 @@
 
                 getStream(event.data.data)
             })
+
+            if(0){
+                // 新的投屏调用方式。
+                navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        cursor: "always"
+                    },
+                    audio: false
+                }).then((stream/*选择窗口后的流*/)=>{
+
+                    debugger
+                })
+            }
+
+
+
         }
     }
 
@@ -1435,6 +1470,17 @@
 
         var channel = pc.createDataChannel("Mydata");
         console.log(channel)
+
+        //指定二进制类型
+        channel.binaryType = 'blob';
+
+        // 当前正在传输数据的字节数
+        channel.bufferedAmount
+
+        // 当传输失败后，最大重新传送次数
+        channel.maxRetransmits
+
+
         channel.onopen = function(event) {
 
             channel.send('sending a message');
@@ -2041,7 +2087,81 @@
 
 
 
+/*
 
+
+
+RTMP(Real Time Messaging Protocol) ，即实时消息协议
+
+    基于 TCP 协议,也需要三次握手
+
+    优点
+        所有编码器都支持 RTMP 输出
+
+    缺点
+        可能会被防火墙阻拦
+        需要安装Flash插件才能播放 RTMP 流（因为是Adobe 开发的，必须用它的flash 插件）
+
+
+
+
+HLS（HTTP Live Streaming），流媒体传输协议（苹果公司实现的）
+
+    本质
+        通过 HTTP 协议下载文件，并将下载的切片缓存起来（可以实现边下载边播的效果）
+
+    优点
+
+        使用HTTP协议，所以避免了防火墙拦截
+        浏览器天然支持 HLS 协议（无需任何插件）
+    缺点
+
+        实时性差
+            由于 HLS 往往采用 10s 的切片，所以最小也要有 10s 的延迟，一般是 20～30s 的延迟，有时甚至更差
+            HLS 使用的是 HTTP 短连接，且 HTTP 是基于 TCP 的，所以这就意味着 HLS 需要不断地与服务器建立连接
+
+
+            HLS将多媒体文件或直接流进行切片，形成一堆的 ts 文件和 m3u8 索引文件并保存到磁盘。
+            当播放器获取 HLS 流时，它首先根据时间戳，通过 HTTP 服务，从 m3u8 索引文件获取最新的 ts 视频文件切片地址，
+            然后再通过 HTTP 协议将它们下载并缓存起来。当播放器播放 HLS 流时，播放线程会从缓冲区中读出数据并进行播放
+
+
+
+
+
+FLV(Flash Video) 是一种容器格式（用于存储流媒体数据）。
+
+    优点
+        不需要很大的媒体头部信息，因此加载速度极快
+            FLV         文件头固定不变，                  新数据 放置到                 文件末尾
+            MP4         文件头随着数据的增长而增长          新数据 通过文件头配置放置到     文件的相对位置
+
+        流式的文件格式，适合在音视频录制中使用
+
+    缺点
+        各大浏览器厂商都默认禁止 Flash 插件
+
+            解决办法
+                flv.js 可以解析 FLV 文件，从中取出音视频数据并转成一种 MP4 格式，然后交给 HTML5 的<video>标签播放，
+                使得浏览器在不借助 Flash 的情况下也可以播放 FLV 文件了
+
+    组成
+        1.The FLV Header
+        2.The FLV Body
+        3.其它 Tag
+
+
+
+
+
+
+
+
+
+
+
+
+*/
 
 
 
